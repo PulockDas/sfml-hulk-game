@@ -1,145 +1,56 @@
 #include<SFML/Graphics.hpp>
 #include<bits/stdc++.h>
+#include<SFML/Audio.hpp>
 
 using namespace sf;
 using namespace std;
 
-int j=1,flagwalk=1,i=1,flagidle=1,idlef=1;
+int j=1,flagwalk=1,i=1,flagidle=1,idlef=1, upperPunchAnim = 6, punchanim = 5,jumpanim=7;
 
-char idle [50], walk[50];
+char idle [50], walk[50] ;
 RenderWindow rw(VideoMode(640,480),"VS-first",Style::Close|Style::Resize);
 RectangleShape player (Vector2f(100.0f,100.0f));
-Texture playtxt;
+Texture playtxt,BackgroundTexture;
+Music backgroundmusic;
 
+Sprite background;
+Vector2u TextureSize;
+Vector2u WindowSize;
 
-void animationidle(Clock clock)
-{
-    if(clock.getElapsedTime().asMilliseconds()>250.f)
-    {
-        if(i>4)
-        {
-            flagidle=1;
-            i=3;
-        }
-        if(i<1)
-        {
-            flagidle =0;
-            i=2;
-        }
-        sprintf (idle,"hulk animation/idle-%d.png", i);
-        playtxt.loadFromFile(idle);
-        if(flagidle==1) i--;
-        else i++;
-    }
-}
+#include"player.hpp"
+//#include"jump.hpp"
+#include"punching.hpp"
+#include"updatemovement.hpp"
 
-void animationreidle(Clock clock)
-{
-    if(clock.getElapsedTime().asMilliseconds()>250.f)
-    {
-        if(i>4)
-        {
-            flagidle=1;
-            i=3;
-        }
-        if(i<1)
-        {
-            flagidle =0;
-            i=2;
-        }
-        sprintf (idle,"hulk animation/reidle-%d.png", i);
-        playtxt.loadFromFile(idle);
-        if(flagidle==1) i--;
-        else i++;
-    }
-}
-
-void animationwalk(Clock clock)
-{
-    if(clock.getElapsedTime().asMilliseconds()>250.f)
-    {
-        if(j>6)
-        {
-            flagwalk=1;
-            j=5;
-        }
-        if(j<1)
-        {
-            flagwalk=0;
-            j=2;
-        }
-        sprintf (walk,"hulk animation/walk-%d.png", j);
-        playtxt.loadFromFile(walk);
-        if(flagwalk==1) j--;
-        else j++;
-    }
-}
-
-void animationrewalk(Clock clock)
-{
-    if(clock.getElapsedTime().asMilliseconds()>250.f)
-    {
-        if(j>6)
-        {
-            flagwalk=1;
-            j=5;
-        }
-        if(j<1)
-        {
-            flagwalk=0;
-            j=2;
-        }
-        sprintf (walk,"hulk animation/rewalk-%d.png", j);
-        playtxt.loadFromFile(walk);
-        if(flagwalk==1) j--;
-        else j++;
-    }
-}
-
-void animationpunch()
-{
-    char punch[50];
-
-    Clock clock;
-
-    for(int i=1; i<5; i++)
-    {
-        rw.clear(Color::Black);
-        sprintf (punch,"hulk animation/punch-%d.png", i);
-        playtxt.loadFromFile(punch);
-        rw.draw(player);
-        rw.display();
-        while(clock.getElapsedTime().asMilliseconds()<100.f);
-        clock.restart();
-    }
-}
-
-void animationupperpunch()
-{
-    char upperpunch[50];
-
-    Clock clock;
-
-    for(int i=1; i<6; i++)
-    {
-        rw.clear(Color::Black);
-        sprintf (upperpunch,"hulk animation/upperpunch-%d.png", i);
-        playtxt.loadFromFile(upperpunch);
-        rw.draw(player);
-        rw.display();
-        while(clock.getElapsedTime().asMilliseconds()<100.f);
-        clock.restart();
-    }
-
-}
+float velocityY = 0;
+bool isjumping = false;
 
 int main()
 {
     rw.setFramerateLimit(100);
     playtxt.loadFromFile("hulk animation/idle-1.png");
-    player.setPosition(0,rw.getSize().y/2);
+    player.setPosition(0,rw.getSize().y-158);
     Clock clock;
-    printf("haram");
+    ///Music
+    backgroundmusic.openFromFile("Music samples/backgroundmusic.ogg");
+    backgroundmusic.setVolume(50.f);
+    backgroundmusic.play();
+    backgroundmusic.setLoop(true);
+    ///
+
+    ///background image
+
+    BackgroundTexture.loadFromFile("background.png");
+
+    TextureSize = BackgroundTexture.getSize();
+    WindowSize = rw.getSize();
+
+    float ScaleX = (float) WindowSize.x / TextureSize.x;
+    float ScaleY = (float) WindowSize.y / TextureSize.y;
+
+    background.setTexture(BackgroundTexture);
+    background.setScale(ScaleX, ScaleY);
+
 
     while (rw.isOpen())
     {
@@ -148,19 +59,20 @@ int main()
         {
             switch (evnt.type)
             {
-            case Event::Closed:
-                rw.close();
-                break;
-            case Event::Resized:
-                break;
-            case Event::TextEntered:
-                if(evnt.text.unicode<128)
-                    printf("%c",evnt.text.unicode);
+                case Event::Closed:
+                    rw.close();
+                    break;
+                case Event::Resized:
+                    break;
+                case Event::TextEntered:
+                    if(evnt.text.unicode<128)
+                        printf("%c",evnt.text.unicode);
+//                case Event::KeyReleased: isjumping = false;
+//                    break;
             }
         }
         if(idlef==1)
-        animationidle(clock);
-
+            animationidle(clock);
         else
             animationreidle(clock);
 
@@ -168,7 +80,7 @@ int main()
         {
             idlef=1;
             animationwalk(clock);
-            player.move(1.f, 0.0f);
+            player.move(1.0f, 0.0f);
         }
 
         if(Keyboard::isKeyPressed(Keyboard::A))
@@ -177,14 +89,51 @@ int main()
             animationrewalk(clock);
             player.move(-1.f, 0.0f);
        }
-        if(Keyboard::isKeyPressed(Keyboard::L)) animationpunch();
 
-        if(Keyboard::isKeyPressed(Keyboard::U)) animationupperpunch();
+        if(Keyboard::isKeyPressed(Keyboard::L)) punchanim = 1;
+
+        if(punchanim < 5)
+        {
+            if(idlef==1)    animationpunch();
+            else    animationrepunch();
+
+            punchanim++;
+        }
+
+        if(Keyboard::isKeyPressed(Keyboard::U))   upperPunchAnim=1;
+            if(upperPunchAnim < 6)
+            {
+                if(idlef==1)    animationupperpunch();
+                else    animationreupperpunch();
+                upperPunchAnim++;
+            }
+
+        if(Keyboard::isKeyPressed(Keyboard::W) && player.getPosition().y >= rw.getSize().y-158)
+        {
+            isjumping = true;
+        }
+        if(isjumping){
+            velocityY=-20;
+            isjumping=false;
+        }
+        player.move(0, velocityY);
+
+        if(player.getPosition().y >= rw.getSize().y-158){
+            velocityY = 0;
+        }
+        else {
+            velocityY++;
+            if(Keyboard::isKeyPressed(Keyboard::D)) player.move(2, 0);
+            if(Keyboard::isKeyPressed(Keyboard::A)) player.move(-2, 0);
+
+        }
 
         if(clock.getElapsedTime().asMilliseconds()>250.f) clock.restart();
-
+        playtxt.setSmooth(true);
         player.setTexture(&playtxt);
+        playtxt.setSmooth(true);
         rw.clear(Color::Black);
+        rw.draw(background);
         rw.draw(player);
         rw.display();
     }
